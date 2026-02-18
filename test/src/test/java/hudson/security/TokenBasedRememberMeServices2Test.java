@@ -328,6 +328,29 @@ class TokenBasedRememberMeServices2Test {
         }
     }
 
+    @Test
+    void rememberMeToken_forgedWithNoProp_shouldNotAuthenticate() throws Exception {
+        j.jenkins.setDisableRememberMe(false);
+
+        HudsonPrivateSecurityRealm realm = new HudsonPrivateSecurityRealm(false, false, null);
+        TokenBasedRememberMeServices2 tokenService = (TokenBasedRememberMeServices2) realm.getSecurityComponents().rememberMe2;
+        j.jenkins.setSecurityRealm(realm);
+
+        String username = "alice";
+        realm.createAccount(username, username);
+
+        // Craft a forged remember-me cookie with "no-prop" as the signature
+        JenkinsRule.WebClient wc = j.createWebClient();
+        long expiryTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        String forgedTokenValue = username + ":" + expiryTime + ":" + "no-prop";
+        String forgedTokenBase64 = Base64.getEncoder().encodeToString(forgedTokenValue.getBytes(StandardCharsets.UTF_8));
+        Cookie forgedCookie = new Cookie(j.getURL().getHost(), tokenService.getCookieName(), forgedTokenBase64);
+        wc.getCookieManager().addCookie(forgedCookie);
+
+        // The forged cookie should NOT authenticate the user
+        assertUserNotConnected(wc, username);
+    }
+
     private Cookie createRememberMeCookie(TokenBasedRememberMeServices2 tokenService, long deltaDuration, hudson.model.User user) throws Exception {
         long tokenValiditySeconds = tokenService.getTokenValiditySeconds();
         long expiryTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(tokenValiditySeconds);
