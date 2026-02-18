@@ -353,6 +353,49 @@ class TokenBasedRememberMeServices2Test {
     }
 
     @Test
+    void forgedRememberMeCookie_withNoProp_shouldNotAuthenticate() throws Exception {
+        j.jenkins.setDisableRememberMe(false);
+
+        HudsonPrivateSecurityRealm realm = new HudsonPrivateSecurityRealm(false, false, null);
+        TokenBasedRememberMeServices2 tokenService = (TokenBasedRememberMeServices2) realm.getSecurityComponents().rememberMe2;
+        j.jenkins.setSecurityRealm(realm);
+
+        String username = "admin";
+        realm.createAccount(username, username);
+
+        // Craft a forged remember-me cookie with "no-prop" as the signature
+        long expiryTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        String forgedTokenValue = username + ":" + expiryTime + ":no-prop";
+        String forgedTokenValueBase64 = Base64.getEncoder().encodeToString(forgedTokenValue.getBytes(StandardCharsets.UTF_8));
+        Cookie forgedCookie = new Cookie(j.getURL().getHost(), tokenService.getCookieName(), forgedTokenValueBase64);
+
+        JenkinsRule.WebClient wc = j.createWebClient();
+        wc.getCookieManager().addCookie(forgedCookie);
+
+        // The forged cookie must NOT authenticate the attacker as admin
+        assertUserNotConnected(wc, username);
+    }
+
+    @Test
+    void makeTokenSignature_shouldAlwaysUseMAC() throws Exception {
+        j.jenkins.setDisableRememberMe(false);
+
+        HudsonPrivateSecurityRealm realm = new HudsonPrivateSecurityRealm(false, false, null);
+        TokenBasedRememberMeServices2 tokenService = (TokenBasedRememberMeServices2) realm.getSecurityComponents().rememberMe2;
+        j.jenkins.setSecurityRealm(realm);
+
+        String username = "alice";
+        realm.createAccount(username, username);
+
+        long expiryTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        String signature = tokenService.makeTokenSignature(expiryTime, username);
+
+        // The signature must never be the literal "no-prop" string — it must always be an HMAC
+        assertThat("Token signature must be an HMAC, not a literal fallback value", signature, not(is("no-prop")));
+        assertThat("Token signature must not be empty", signature, not(is(emptyString())));
+    }
+
+    @Test
     @Issue("SECURITY-996")
     void rememberMeToken_shouldNotBeRead_ifOptionIsDisabled() throws Exception {
         j.jenkins.setDisableRememberMe(false);
