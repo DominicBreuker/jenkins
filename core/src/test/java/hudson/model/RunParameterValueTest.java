@@ -36,7 +36,7 @@ class RunParameterValueTest {
     @Test
     void robustness() {
         // Constructor-based tests that require a Jenkins instance have been moved
-        // to test/src/test/java/hudson/model/RunParameterValueTest.java
+        // to test/src/test/java/hudson/model/RunParameterValueIntegrationTest.java
 
         assertThrows(IllegalArgumentException.class, () -> new RunParameterValue("whatever", null));
         assertThrows(IllegalArgumentException.class, () -> new RunParameterValue("whatever", "invalid"));
