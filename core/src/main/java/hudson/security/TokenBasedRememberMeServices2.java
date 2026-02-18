@@ -104,9 +104,10 @@ public class TokenBasedRememberMeServices2 extends AbstractRememberMeServices {
             UserSeedProperty userSeedProperty = user.getProperty(UserSeedProperty.class);
             if (userSeedProperty == null) {
                 // if you want to filter out the user seed property, you should consider using the DISABLE_USER_SEED instead
-                return "no-prop";
+                userSeed = "no-prop";
+            } else {
+                userSeed = userSeedProperty.getSeed();
             }
-            userSeed = userSeedProperty.getSeed();
         }
         String token = String.join(":", username, Long.toString(tokenExpiryTime), userSeed, getKey());
         return MAC.mac(token);
@@ -203,8 +204,7 @@ public class TokenBasedRememberMeServices2 extends AbstractRememberMeServices {
         // be cancelled.
         String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername());
         if (!equals(expectedTokenSignature, cookieTokens[2])) {
-            throw new InvalidCookieException("Cookie token[2] contained signature '" + cookieTokens[2]
-                    + "' but expected '" + expectedTokenSignature + "'");
+            throw new InvalidCookieException("Cookie token[2] contained an invalid signature");
         }
         return userDetails;
     }
