@@ -104,9 +104,10 @@ public class TokenBasedRememberMeServices2 extends AbstractRememberMeServices {
             UserSeedProperty userSeedProperty = user.getProperty(UserSeedProperty.class);
             if (userSeedProperty == null) {
                 // if you want to filter out the user seed property, you should consider using the DISABLE_USER_SEED instead
-                return "no-prop";
+                userSeed = "no-prop";
+            } else {
+                userSeed = userSeedProperty.getSeed();
             }
-            userSeed = userSeedProperty.getSeed();
         }
         String token = String.join(":", username, Long.toString(tokenExpiryTime), userSeed, getKey());
         return MAC.mac(token);
