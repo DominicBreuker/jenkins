@@ -35,16 +35,14 @@ class RunParameterValueTest {
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test
     void robustness() {
-        RunParameterValue rpv = new RunParameterValue("whatever", "folder/job#57");
-        assertEquals("whatever", rpv.getName());
-        assertEquals("folder/job", rpv.getJobName());
-        assertEquals("57", rpv.getNumber());
+        // Constructor-based tests that require a Jenkins instance have been moved
+        // to test/src/test/java/hudson/model/RunParameterValueTest.java
 
         assertThrows(IllegalArgumentException.class, () -> new RunParameterValue("whatever", null));
         assertThrows(IllegalArgumentException.class, () -> new RunParameterValue("whatever", "invalid"));
         assertThrows(IllegalArgumentException.class, () -> new RunParameterValue("whatever", "invalid", "desc"));
 
-        rpv = (RunParameterValue) Run.XSTREAM2.fromXML("<hudson.model.RunParameterValue><name>whatever</name><runId>bogus</runId></hudson.model.RunParameterValue>");
+        RunParameterValue rpv = (RunParameterValue) Run.XSTREAM2.fromXML("<hudson.model.RunParameterValue><name>whatever</name><runId>bogus</runId></hudson.model.RunParameterValue>");
         assertEquals("whatever", rpv.getName());
         assertNull(rpv.getJobName());
         assertNull(rpv.getNumber());
