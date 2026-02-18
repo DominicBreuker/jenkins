@@ -392,4 +392,48 @@ class TokenBasedRememberMeServices2Test {
             assertThat(page, hasXPath("//name", is("alice")));
         }
     }
+
+    @Test
+    void forgedRememberMeCookie_withNoPropSignature_shouldBeRejected() throws Exception {
+        j.jenkins.setDisableRememberMe(false);
+
+        HudsonPrivateSecurityRealm realm = new HudsonPrivateSecurityRealm(false, false, null);
+        j.jenkins.setSecurityRealm(realm);
+
+        String username = "alice";
+        realm.createAccount(username, username);
+
+        // An attacker crafts a cookie with the literal "no-prop" as the signature
+        long expiryTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        String forgedTokenValue = username + ":" + expiryTime + ":" + "no-prop";
+        String forgedCookieBase64 = Base64.getEncoder().encodeToString(forgedTokenValue.getBytes(StandardCharsets.UTF_8));
+        Cookie forgedCookie = new Cookie(j.getURL().getHost(),
+                AbstractRememberMeServices.SPRING_SECURITY_REMEMBER_ME_COOKIE_KEY, forgedCookieBase64);
+
+        JenkinsRule.WebClient wc = j.createWebClient();
+        wc.getCookieManager().addCookie(forgedCookie);
+
+        // The forged cookie must NOT authenticate the attacker
+        assertUserNotConnected(wc, username);
+    }
+
+    @Test
+    void makeTokenSignature_shouldAlwaysComputeHMAC() throws Exception {
+        j.jenkins.setDisableRememberMe(false);
+
+        HudsonPrivateSecurityRealm realm = new HudsonPrivateSecurityRealm(false, false, null);
+        TokenBasedRememberMeServices2 tokenService = (TokenBasedRememberMeServices2) realm.getSecurityComponents().rememberMe2;
+        j.jenkins.setSecurityRealm(realm);
+
+        String username = "bob";
+        realm.createAccount(username, username);
+
+        long expiryTime = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1);
+        String signature = tokenService.makeTokenSignature(expiryTime, username);
+
+        // The signature must never be the literal string "no-prop"
+        assertThat(signature, not(is("no-prop")));
+        // The signature should be a proper hex HMAC value (non-empty)
+        assertThat(signature, not(is(emptyString())));
+    }
 }
